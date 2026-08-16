@@ -23,7 +23,7 @@ THINKING_LEVEL = os.environ.get("KABOOTAR_THINKING_LEVEL", "low")
 # How long (seconds) to listen for a command after the wake word fires.
 COMMAND_PHRASE_TIME_LIMIT = 8
 # How long to wait in silence before giving up on a command.
-COMMAND_TIMEOUT = 5
+COMMAND_TIMEOUT = 6
 
 # Friendly name -> how to launch it. Values are passed to os.startfile / subprocess.
 # Extend this freely — it's just a lookup table.

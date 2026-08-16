@@ -35,13 +35,19 @@ def assistant_loop(overlay: Overlay) -> None:
     overlay.set_state("idle")
 
     while not stop_event.is_set():
-        woke = ear.wait_for_wake_word(stop_event)
+        woke, leftover = ear.wait_for_wake_word(stop_event)
         if not woke or stop_event.is_set():
             break
 
         overlay.set_state("listening")
-        print("Woke up — listening for a command...")
-        command = ear.listen_command()
+        if leftover:
+            # They said the command in the same breath as the wake word
+            # ("Kabootar, open YouTube") — no need to listen again.
+            print(f"Woke up — command included: {leftover!r}")
+            command = leftover
+        else:
+            print("Woke up — listening for a command...")
+            command = ear.listen_command()
 
         if not command:
             print("Didn't catch anything.")

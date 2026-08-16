@@ -23,6 +23,20 @@ def _matches_wake_word(text: str) -> bool:
     return False
 
 
+def _command_after_wake_word(text: str) -> str:
+    """If the wake word was said together with a command in one breath
+    ("Kabootar, open YouTube"), return the part after it. Empty if the
+    phrase was just the wake word (or matched only fuzzily).
+    """
+    lower = text.lower()
+    for word in WAKE_WORDS:
+        idx = lower.find(word)
+        if idx != -1:
+            remainder = text[idx + len(word) :]
+            return remainder.strip(" ,.-—")
+    return ""
+
+
 class KabootarEar:
     """Wraps a microphone + recognizer with wake-word spotting and command capture."""
 
@@ -36,16 +50,18 @@ class KabootarEar:
             self.recognizer.adjust_for_ambient_noise(source, duration=1.0)
         print(f"Calibrated. Energy threshold: {self.recognizer.energy_threshold:.1f}")
 
-    def wait_for_wake_word(self, stop_event: threading.Event) -> bool:
+    def wait_for_wake_word(self, stop_event: threading.Event) -> tuple[bool, str]:
         """Blocks, listening in short bursts, until "Kabootar" is heard or stop_event is set.
 
-        Returns True on wake-word detection, False if stopped.
+        Returns (True, leftover_command) on detection — leftover_command is whatever was said
+        right after the wake word in the same breath (e.g. "Kabootar, open YouTube" -> "open
+        YouTube"), or "" if the user said only the wake word. Returns (False, "") if stopped.
         """
         while not stop_event.is_set():
             try:
                 with self.mic as source:
                     audio = self.recognizer.listen(
-                        source, timeout=3, phrase_time_limit=3
+                        source, timeout=3, phrase_time_limit=4
                     )
             except sr.WaitTimeoutError:
                 continue
@@ -61,8 +77,8 @@ class KabootarEar:
 
             print(f"[heard] {text!r}")
             if _matches_wake_word(text):
-                return True
-        return False
+                return True, _command_after_wake_word(text)
+        return False, ""
 
     def listen_command(self) -> str:
         """Captures one spoken command and returns the transcribed text (empty on failure)."""
